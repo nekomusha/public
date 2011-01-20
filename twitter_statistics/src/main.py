@@ -4,6 +4,7 @@ import os.path
 import sys
 from contextlib import closing
 import logging
+from ConfigParser import SafeConfigParser
 
 #LOG_FILENAME = '/tmp/logging_example.out'
 #logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG,)
@@ -26,11 +27,25 @@ def main(args):
     display words and score extracted from tweets on gwibberdb
     '''
     # SQLite database file path for statisticsdb
-    _home = os.path.expanduser("~")
-    outfile = os.path.join(_home, "morph.sqlite")
+    home = os.path.expanduser("~")
+    configbase = os.path.join(home, ".config/twitter_statistics")
+    configfile = os.path.join(configbase, "config.ini")
+    config = SafeConfigParser()
+    if not os.access(configfile, os.F_OK):
+        if not os.access(configbase, os.F_OK):
+            os.makedirs(configbase)
+        with open(configfile, "w") as fout:
+            fout.write(
+"""[Statistics]
+DatabaseURI = sqlite:///%s/morph.sqlite
+""" % home)
+    config.read(configfile)
+    dburi = config.get("Statistics", "DatabaseURI") 
     
+    # TODO: unicode parameters was not effective...
     # create tables and a SQLAlchemy session class
-    engine = create_engine('sqlite:///' + outfile, echo=False)
+    engine = create_engine(dburi, echo=False)
+    
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     
@@ -62,6 +77,10 @@ def main(args):
         
         # get words with high TF-IDF
         for sender, word, score in get_high_score_words(session):
+            if not isinstance(sender, unicode):
+                sender = unicode(sender, "utf-8")
+            if not isinstance(word, unicode):
+                word = unicode(word, "utf-8")
             print u'"%s","%s",%s' % (sender, word, score)
 
 if __name__ == '__main__':

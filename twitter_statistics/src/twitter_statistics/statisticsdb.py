@@ -4,8 +4,11 @@ statistics table definitions for SQLAlchemy
 and utility functions
 '''
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, BigInteger
 from sqlalchemy.orm import relationship, backref
+
+TID_LEN = 15
+TMES_LEN = 255
 
 Base = declarative_base()
 class Sender(Base):
@@ -13,9 +16,10 @@ class Sender(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'senders'
+    __table_args__ = {'mysql_engine':'InnoDB'}
 
     sid = Column(Integer, primary_key=True)
-    sender = Column(String, nullable=False, index=True, unique=True)
+    sender = Column(String(TID_LEN), nullable=False, index=True, unique=True)
 
     def __init__(self, sender):
         self.sender = sender
@@ -28,10 +32,11 @@ class Word(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'words'
+    __table_args__ = {'mysql_engine':'InnoDB'}
 
     wid = Column(Integer, primary_key=True, autoincrement = True)
-    word = Column(String, nullable=False, index=True, unique=True)
-    sender_count = Column(String, nullable=False)
+    word = Column(String(TMES_LEN), nullable=False, index=True, unique=True)
+    sender_count = Column(Integer, nullable=False)
 
     def __init__(self, word, sender_count):
         self.word = word
@@ -45,10 +50,12 @@ class Message(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'messages'
-    mid = Column(Integer, primary_key=True, autoincrement = True)
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
+    mid = Column(BigInteger, primary_key=True, autoincrement = True)
     time = Column(Integer, nullable=False)
     sid = Column(Integer, ForeignKey('senders.sid'), nullable=False)
-    message = Column(String, nullable=False)
+    message = Column(String(TMES_LEN), nullable=False)
 
     sender = relationship(Sender, backref=backref('messages', order_by=mid))
 
@@ -66,9 +73,11 @@ class MessageWord(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'message_words'
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
     wid = Column(Integer, ForeignKey('words.wid'), primary_key=True)
     count = Column(Integer, nullable=False)
-    mid = Column(Integer, ForeignKey('messages.mid'), primary_key=True)
+    mid = Column(BigInteger, ForeignKey('messages.mid'), primary_key=True)
 
     word = relationship(Word, \
                         backref=backref('message_words', order_by=wid))
@@ -86,6 +95,8 @@ class Score(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'scores'
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
     sid = Column(Integer, ForeignKey('senders.sid'), primary_key=True)
     wid = Column(Integer, ForeignKey('words.wid'), primary_key=True)
     score = Column(Float, nullable=False)
@@ -104,8 +115,10 @@ class Parameter(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'parameters'
-    key = Column(String, primary_key=True)
-    value = Column(String, nullable=True)
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
+    key = Column(String(255), primary_key=True)
+    value = Column(String(1000), nullable=True)
 
     def __init__(self, key, value):
         self.key = key
@@ -119,10 +132,13 @@ class TmpMessage(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'tmp_messages'
-    mid = Column(Integer, primary_key=True)
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
+
+    mid = Column(BigInteger, primary_key=True)
     time = Column(Integer, nullable=False)
-    sender = Column(String, nullable=False)
-    message = Column(String, nullable=False)
+    sender = Column(String(TID_LEN), nullable=False)
+    message = Column(String(TMES_LEN), nullable=False)
     need = Column(Boolean, nullable=False)
 
     def __init__(self, mid, time, sender, message, need):
@@ -141,9 +157,11 @@ class TmpMessageWord(Base):
     ORM class and table declaration by SQLAlchemy
     '''
     __tablename__ = 'tmp_message_words'
-    word = Column(String, primary_key=True)
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
+    word = Column(String(TMES_LEN), primary_key=True)
     count = Column(Integer, nullable=False)
-    mid = Column(Integer, primary_key=True)
+    mid = Column(BigInteger, primary_key=True)
 
     def __init__(self, word, count, mid):
         self.word = word

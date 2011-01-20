@@ -101,7 +101,10 @@ def _mark_tmpmsg_in_japanese(session, japanase):
     mark tmp messages in Japanese need.
     '''
     for tmp_message in session.query(TmpMessage):
-        if japanase.is_japanese(tmp_message.message):
+        message = tmp_message.message
+        if not isinstance(message, unicode):
+            message = unicode(message, "utf-8")
+        if japanase.is_japanese(message):
             tmp_message.need = True
     session.flush()
 
@@ -134,7 +137,7 @@ def _register_new_tmp_messages(session):
             mid, time, sid, message
         from
             tmp_messages
-            join senders on tmp_messages.sender == senders.sender
+            join senders on tmp_messages.sender = senders.sender
     """)
 
 def insert_messages(reader, session, japanese_module):
@@ -177,7 +180,6 @@ def _get_new_messges_query(session):
     query = query.order_by(Message.time).limit(MESSAGE_COUNT_PER_COMMIT)
     return query
 
-
 def _apply_message_cutter(message_reader):
     '''
     return cut messages generator
@@ -193,7 +195,9 @@ def _message_words_gen(message_reader, japanese_module):
     mcount = wcount = 0
     for mid, message in message_reader:
         # extract words from message.
-        words = japanese_module.get_nouns(message.encode("utf-8"))
+        if not isinstance(message, str):
+            message = message.encode("utf-8")
+        words = japanese_module.get_nouns(message)
     
         # register word, count, message tuples.
         words.sort()
@@ -313,9 +317,8 @@ def calculate_tf_idf(session):
         select
             sid,
             words.wid,
-            cast(sum(message_words.count) as double)
-            * cast(:all_sender_count as double)
-            / cast(sender_count as double) as tfidf
+            1. * sum(message_words.count)
+            * :all_sender_count / sender_count as tfidf
         from
             words,
             messages,
